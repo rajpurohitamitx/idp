@@ -13,7 +13,7 @@
     "test": "vitest run tests/engines.test.ts",
     "test:integration": "vitest run tests/integration",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && tsc -p tsconfig.json"
+    "vercel-build": "prisma generate && node scripts/db-setup.js && tsc -p tsconfig.json"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
