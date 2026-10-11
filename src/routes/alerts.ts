@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { authenticate, authorize } from '../middleware/auth';
+import * as c from '../controllers/alertController';
+const r = Router();
+r.use(authenticate);
+r.get('/', c.listAlerts);
+r.post('/:id/acknowledge', c.acknowledgeAlert);
+r.post('/:id/resolve', authorize('ADMIN', 'SUPERVISOR'), c.resolveAlert);
+r.post('/:id/false-alarm', authorize('ADMIN', 'SUPERVISOR'), c.falseAlarmAlert);
+export default r;

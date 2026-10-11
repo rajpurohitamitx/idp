@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { authenticate, authorize, userOrDevice } from '../middleware/auth';
+import { imageUpload } from '../middleware/upload';
+import * as c from '../controllers/cameraController';
+const r = Router();
+r.get('/', authenticate, c.listCameras);
+r.get('/:id', authenticate, c.getCamera);
+r.post('/', authenticate, authorize('ADMIN'), c.createCamera);
+r.put('/:id', authenticate, authorize('ADMIN'), c.updateCamera);
+r.delete('/:id', authenticate, authorize('ADMIN'), c.deleteCamera);
+r.post('/:id/heartbeat', c.cameraHeartbeat);
+r.post('/:id/capture', authenticate, authorize('ADMIN', 'SUPERVISOR'), c.requestCapture);
+r.post('/images', userOrDevice, imageUpload.single('image'), c.analyzeImageUpload);
+export default r;

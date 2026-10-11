@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { authenticate, authorize } from '../middleware/auth';
+import * as c from '../controllers/workerController';
+const r = Router();
+r.use(authenticate);
+r.get('/', c.listWorkers);
+r.get('/:id', c.getWorker);
+r.post('/', authorize('ADMIN'), c.createWorker);
+r.put('/:id', authorize('ADMIN'), c.updateWorker);
+r.delete('/:id', authorize('ADMIN'), c.deleteWorker);
+export default r;
