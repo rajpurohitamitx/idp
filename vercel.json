@@ -12,8 +12,24 @@
   },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
       "destination": "/api"
+    },
+    {
+      "source": "/api-docs",
+      "destination": "/api"
+    },
+    {
+      "source": "/api-docs/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/api-docs.json",
+      "destination": "/api"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

@@ -11,8 +11,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const token = localStorage.getItem('ig_token');
-    if (!user || !token) return;
-    const s = io(import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:4000', { auth: { token } });
+    const url = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:4000';
+    if (!user || !token || !url) return; // live sockets disabled when VITE_SOCKET_URL is empty (e.g. Vercel)
+    const s = io(url, { auth: { token } });
     ref.current = s; setSocket(s);
     return () => { s.disconnect(); ref.current = null; setSocket(null); };
   }, [user]);
