@@ -1,0 +1,22 @@
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { io, type Socket } from 'socket.io-client';
+import { useAuth } from './AuthContext';
+
+const Ctx = createContext<Socket | null>(null);
+
+export function SocketProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const ref = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('ig_token');
+    if (!user || !token) return;
+    const s = io(import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:4000', { auth: { token } });
+    ref.current = s; setSocket(s);
+    return () => { s.disconnect(); ref.current = null; setSocket(null); };
+  }, [user]);
+
+  return <Ctx.Provider value={socket}>{children}</Ctx.Provider>;
+}
+export const useSocket = () => useContext(Ctx);

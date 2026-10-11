@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+html, body, #root { height: 100%; }
+body { font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+::selection { background: #f5a62355; }
+.card { @apply bg-panel border border-line rounded-md; }
+.badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium; }
+.badge-low { @apply bg-hazard-low/15 text-hazard-low; }
+.badge-medium { @apply bg-hazard-medium/15 text-hazard-medium; }
+.badge-high { @apply bg-hazard-high/15 text-hazard-high; }
+.badge-critical { @apply bg-hazard-critical/20 text-hazard-critical; }
+.badge-ok { @apply bg-ok/15 text-ok; }
+.btn { @apply px-3 py-1.5 rounded text-sm font-medium transition-colors; }
+.btn-primary { @apply bg-safety text-ink hover:bg-safety/90; }
+.btn-ghost { @apply bg-panel2 text-slate-200 hover:bg-line; }
