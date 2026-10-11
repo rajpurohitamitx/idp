@@ -21,7 +21,7 @@ services:
       MODEL_BACKEND: heuristic
 
   backend:
-    build: ./backend
+    build: .
     depends_on:
       postgres: { condition: service_healthy }
       ai-service: { condition: service_started }

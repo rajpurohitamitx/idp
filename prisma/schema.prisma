@@ -1,0 +1,350 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role { ADMIN SUPERVISOR OPERATOR }
+enum DeviceType { CAMERA ESP32 SENSOR_CONTROLLER RFID_READER THERMAL_SENSOR GATEWAY OTHER }
+enum OnlineStatus { ONLINE OFFLINE WARNING PROCESSING }
+enum SensorType { GAS SMOKE TEMPERATURE HUMIDITY ELECTRICAL THERMAL OTHER }
+enum Severity { LOW MEDIUM HIGH CRITICAL }
+enum HazardType {
+  NO_HELMET NO_SAFETY_VEST NO_GLOVES NO_SAFETY_SHOES
+  GAS_LEAK SMOKE FIRE HIGH_TEMPERATURE THERMAL_ANOMALY ELECTRICAL_ANOMALY
+  RESTRICTED_ZONE UNKNOWN_HAZARD OTHER
+}
+enum HazardSource { CAMERA SENSOR FUSED MANUAL }
+enum HazardStatus { ACTIVE ACKNOWLEDGED RESOLVED FALSE_ALARM }
+enum AlertKind { HAZARD DEVICE_OFFLINE DEVICE_ONLINE SYSTEM }
+enum AlertStatus { OPEN ACKNOWLEDGED RESOLVED FALSE_ALARM }
+enum IncidentStatus { OPEN ACKNOWLEDGED RESOLVED FALSE_ALARM }
+enum AnalysisStatus { RECEIVED PROCESSING COMPLETE FAILED }
+enum PPEResult { COMPLIANT VIOLATION UNKNOWN }
+enum AccessDecision { PENDING_PPE APPROVED DENIED UNKNOWN_CARD INACTIVE_WORKER }
+enum CommandStatus { QUEUED SENT ACCEPTED RUNNING COMPLETED FAILED EXPIRED }
+enum WorkerStatus { ACTIVE INACTIVE SUSPENDED }
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(OPERATOR)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model Worker {
+  id          String       @id @default(cuid())
+  employeeId  String       @unique
+  name        String
+  department  String?
+  designation String?
+  photoUrl    String?
+  rfidUid     String?      @unique
+  biometricRef String?
+  status      WorkerStatus @default(ACTIVE)
+  isDemo      Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  accessLogs  AccessLog[]
+  ppeChecks   PPECheck[]
+}
+
+model Device {
+  id              String       @id @default(cuid())
+  deviceId        String       @unique
+  name            String
+  type            DeviceType
+  location        String
+  status          OnlineStatus @default(OFFLINE)
+  firmwareVersion String?
+  tokenHash       String?
+  authorized      Boolean      @default(true)
+  lastHeartbeat   DateTime?
+  lastCommunication DateTime?
+  signalStrength  Int?
+  uptimeSeconds   Int?
+  config          Json?
+  isDemo          Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  cameras         Camera[]
+  sensors         Sensor[]
+  commands        DeviceCommand[]
+}
+
+model Camera {
+  id            String       @id @default(cuid())
+  cameraId      String       @unique
+  name          String
+  location      String
+  streamUrl     String?
+  status        OnlineStatus @default(OFFLINE)
+  deviceId      String?
+  device        Device?      @relation(fields: [deviceId], references: [id])
+  isEntryCamera Boolean      @default(false)
+  captureIntervalSeconds Int @default(10)
+  lastHeartbeat DateTime?
+  isDemo        Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  images        Image[]
+  zones         RestrictedZone[]
+  hazards       Hazard[]
+}
+
+model Sensor {
+  id               String       @id @default(cuid())
+  sensorId         String       @unique
+  name             String
+  type             SensorType
+  unit             String
+  location         String
+  status           OnlineStatus @default(OFFLINE)
+  deviceId         String?
+  device           Device?      @relation(fields: [deviceId], references: [id])
+  warningThreshold  Float?
+  criticalThreshold Float?
+  lowWarningThreshold Float?
+  requiredAbnormalReadings Int    @default(2)
+  rateOfChangeLimit        Float?
+  staleAfterSeconds        Int    @default(60)
+  lastReadingAt    DateTime?
+  lastValue        Float?
+  isDemo           Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  readings         SensorReading[]
+  hazards          Hazard[]
+}
+
+model SensorReading {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  sensorId  String
+  sensor    Sensor   @relation(fields: [sensorId], references: [id], onDelete: Cascade)
+  value     Float?
+  unit      String
+  grid      Json?
+  timestamp DateTime
+  receivedAt DateTime @default(now())
+  level     String   @default("NORMAL")
+  isDemo    Boolean  @default(false)
+
+  @@index([sensorId, timestamp])
+}
+
+model Image {
+  id            String         @id @default(cuid())
+  imageId       String         @unique
+  cameraId      String
+  camera        Camera         @relation(fields: [cameraId], references: [id])
+  deviceId      String?
+  storagePath   String
+  mimeType      String
+  sizeBytes     Int
+  location      String
+  capturedAt    DateTime
+  receivedAt    DateTime       @default(now())
+  status        AnalysisStatus @default(RECEIVED)
+  isDemo        Boolean        @default(false)
+  analysis      ImageAnalysis?
+  ppeChecks     PPECheck[]
+  detections    DetectionEvent[]
+
+  @@index([cameraId, capturedAt])
+}
+
+model ImageAnalysis {
+  id               String   @id @default(cuid())
+  analysisId       String   @unique
+  imageId          String   @unique
+  image            Image    @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  modelName        String
+  modelVersion     String
+  aiProcessingMs   Int
+  backendProcessingMs Int?
+  totalMs          Int?
+  captureToReceiveMs Int?
+  detections       Json
+  ppeSummary       Json?
+  overallResult    String
+  confidence       Float
+  createdAt        DateTime @default(now())
+}
+
+model DetectionEvent {
+  id         String     @id @default(cuid())
+  imageId    String
+  image      Image      @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  cameraId   String
+  type       String
+  confidence Float
+  boundingBox Json
+  confirmed  Boolean    @default(false)
+  streak     Int        @default(1)
+  createdAt  DateTime   @default(now())
+
+  @@index([cameraId, type, createdAt])
+}
+
+model PPECheck {
+  id        String    @id @default(cuid())
+  imageId   String?
+  image     Image?    @relation(fields: [imageId], references: [id])
+  workerId  String?
+  worker    Worker?   @relation(fields: [workerId], references: [id])
+  accessLogId String? @unique
+  cameraId  String?
+  purpose   String    @default("MONITORING")
+  result    PPEResult @default(UNKNOWN)
+  items     Json?
+  createdAt DateTime  @default(now())
+  isDemo    Boolean   @default(false)
+}
+
+model Hazard {
+  id          String       @id @default(cuid())
+  hazardId    String       @unique
+  type        HazardType
+  severity    Severity
+  location    String
+  source      HazardSource
+  confidence  Float?
+  status      HazardStatus @default(ACTIVE)
+  cameraId    String?
+  camera      Camera?      @relation(fields: [cameraId], references: [id])
+  sensorId    String?
+  sensor      Sensor?      @relation(fields: [sensorId], references: [id])
+  imageId     String?
+  workerId    String?
+  details     Json?
+  occurrences Int          @default(1)
+  firstSeenAt DateTime     @default(now())
+  lastSeenAt  DateTime     @default(now())
+  isDemo      Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  alerts      Alert[]
+  incident    Incident?
+
+  @@index([status, type, location])
+  @@index([lastSeenAt])
+}
+
+model Alert {
+  id             String      @id @default(cuid())
+  kind           AlertKind   @default(HAZARD)
+  title          String
+  message        String
+  severity       Severity
+  status         AlertStatus @default(OPEN)
+  hazardId       String?
+  hazard         Hazard?     @relation(fields: [hazardId], references: [id])
+  deviceId       String?
+  location       String?
+  acknowledgedBy String?
+  acknowledgedAt DateTime?
+  resolvedBy     String?
+  resolvedAt     DateTime?
+  isDemo         Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+
+  @@index([status, createdAt])
+}
+
+model Incident {
+  id             String         @id @default(cuid())
+  incidentId     String         @unique
+  hazardId       String         @unique
+  hazard         Hazard         @relation(fields: [hazardId], references: [id])
+  severity       Severity
+  location       String
+  source         HazardSource
+  imageId        String?
+  sensorRef      Json?
+  status         IncidentStatus @default(OPEN)
+  notes          String?
+  detectedAt     DateTime
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  acknowledgedBy String?
+  resolvedBy     String?
+  isDemo         Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model AccessLog {
+  id         String         @id @default(cuid())
+  eventId    String         @unique
+  deviceId   String
+  readerId   String?
+  rfidUid    String
+  workerId   String?
+  worker     Worker?        @relation(fields: [workerId], references: [id])
+  decision   AccessDecision @default(PENDING_PPE)
+  reason     String?
+  timestamp  DateTime
+  isDemo     Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+
+  @@index([timestamp])
+}
+
+model RestrictedZone {
+  id        String   @id @default(cuid())
+  name      String
+  location  String
+  cameraId  String
+  camera    Camera   @relation(fields: [cameraId], references: [id])
+  region    Json?
+  active    Boolean  @default(true)
+  isDemo    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DeviceCommand {
+  id         String        @id @default(cuid())
+  commandId  String        @unique
+  deviceId   String
+  device     Device        @relation(fields: [deviceId], references: [id])
+  command    String
+  payload    Json?
+  status     CommandStatus @default(QUEUED)
+  result     Json?
+  issuedAt   DateTime      @default(now())
+  expiresAt  DateTime
+  updatedAt  DateTime      @updatedAt
+
+  @@index([deviceId, status])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  actor     String
+  action    String
+  entity    String?
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

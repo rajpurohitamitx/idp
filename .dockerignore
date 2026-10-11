@@ -1,0 +1,8 @@
+frontend
+ai-service
+hardware-integration
+database
+.github
+node_modules
+dist
+.env
