@@ -1,0 +1,16 @@
+import { Router } from 'express';
+import { authenticate, authorize, deviceAuth } from '../middleware/auth';
+import * as c from '../controllers/deviceController';
+const r = Router();
+r.post('/register', c.register);
+r.post('/heartbeat', c.heartbeat);
+r.get('/:deviceId/config', c.getDeviceConfig);
+r.get('/:id/commands', deviceAuth, c.pollCommands);
+r.post('/commands/ack', deviceAuth, c.acknowledgeDeviceCommand);
+r.get('/', authenticate, authorize('ADMIN', 'SUPERVISOR'), c.listDevices);
+r.get('/:id', authenticate, authorize('ADMIN', 'SUPERVISOR'), c.getDevice);
+r.post('/', authenticate, authorize('ADMIN'), c.createDevice);
+r.put('/:id', authenticate, authorize('ADMIN'), c.updateDevice);
+r.post('/:id/rotate-token', authenticate, authorize('ADMIN'), c.rotateDeviceToken);
+r.delete('/:id', authenticate, authorize('ADMIN'), c.deleteDevice);
+export default r;

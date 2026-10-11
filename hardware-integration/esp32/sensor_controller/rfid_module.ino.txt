@@ -1,0 +1,38 @@
+/*
+  RC522 RFID module — include alongside sensor_controller.ino (same device/token).
+  Requires: MFRC522 library. SDA->D21, SCK->D18, MOSI->D23, MISO->D19, RST->D22.
+*/
+#include <SPI.h>
+#include <MFRC522.h>
+
+#define RFID_SS_PIN 21
+#define RFID_RST_PIN 22
+MFRC522 rfid(RFID_SS_PIN, RFID_RST_PIN);
+
+void rfidSetup() { SPI.begin(); rfid.PCD_Init(); }
+
+String uidToHex(MFRC522::Uid uid) {
+  String s;
+  for (byte i = 0; i < uid.size; i++) { if (uid.uidByte[i] < 0x10) s += "0"; s += String(uid.uidByte[i], HEX); }
+  s.toUpperCase();
+  return s;
+}
+
+void rfidLoop() {
+  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) return;
+  String uid = uidToHex(rfid.uid);
+
+  StaticJsonDocument<256> doc;
+  doc["eventId"] = nextEventId("RFIDEVT");
+  doc["deviceId"] = DEVICE_ID;
+  doc["readerId"] = "RFID-001";
+  doc["rfidUid"] = uid;
+  doc["timestamp"] = isoNow();
+  String body; serializeJson(doc, body);
+  String resp;
+  httpPostJson("/api/v1/access-events", body, resp);
+
+  rfid.PICC_HaltA();
+  rfid.PCD_StopCrypto1();
+}
+// Call rfidSetup() from setup() and rfidLoop() from loop() in sensor_controller.ino.

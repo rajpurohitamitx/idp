@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { authenticate, authorize, userOrDevice } from '../middleware/auth';
+import * as c from '../controllers/sensorController';
+const r = Router();
+r.get('/', authenticate, c.listSensors);
+r.get('/:id', authenticate, c.getSensor);
+r.post('/', authenticate, authorize('ADMIN'), c.createSensor);
+r.put('/:id', authenticate, authorize('ADMIN'), c.updateSensor);
+r.delete('/:id', authenticate, authorize('ADMIN'), c.deleteSensor);
+r.post('/:id/readings', userOrDevice, c.postReading);
+r.post('/:id/heartbeat', userOrDevice, c.sensorHeartbeat);
+export default r;

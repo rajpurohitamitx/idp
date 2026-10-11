@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { authenticate, authorize } from '../middleware/auth';
+import * as c from '../controllers/incidentController';
+const r = Router();
+r.use(authenticate);
+r.get('/', c.listIncidents);
+r.get('/:id', c.getIncident);
+r.post('/', authorize('ADMIN', 'SUPERVISOR'), c.createIncident);
+r.put('/:id', authorize('ADMIN', 'SUPERVISOR'), c.updateIncident);
+r.post('/:id/resolve', authorize('ADMIN', 'SUPERVISOR'), c.resolveIncident);
+export default r;

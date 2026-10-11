@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { authenticate, authorize } from '../middleware/auth';
+import * as c from '../controllers/zoneController';
+const r = Router();
+r.use(authenticate);
+r.get('/', c.listZones);
+r.post('/', authorize('ADMIN'), c.createZone);
+r.put('/:id', authorize('ADMIN'), c.updateZone);
+r.delete('/:id', authorize('ADMIN'), c.deleteZone);
+export default r;

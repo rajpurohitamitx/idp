@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { authenticate, userOrDevice } from '../middleware/auth';
+import { imageUpload } from '../middleware/upload';
+import * as c from '../controllers/accessController';
+import * as entry from '../controllers/entryController';
+const r = Router();
+r.post('/', userOrDevice, c.postAccessEvent);
+r.get('/', authenticate, c.listAccessLogs);
+r.post('/:eventId/entry-check', userOrDevice, imageUpload.single('image'), entry.entryCheck);
+export default r;
