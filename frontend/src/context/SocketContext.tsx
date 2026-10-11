@@ -11,7 +11,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const token = localStorage.getItem('ig_token');
-    const url = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:4000';
+    const onLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const envUrl = import.meta.env.VITE_SOCKET_URL;
+    const url = onLocalhost ? (envUrl ?? 'http://localhost:4000') : (envUrl && !/localhost|127\.0\.0\.1/.test(envUrl) ? envUrl : '');
     if (!user || !token || !url) return; // live sockets disabled when VITE_SOCKET_URL is empty (e.g. Vercel)
     const s = io(url, { auth: { token } });
     ref.current = s; setSocket(s);
